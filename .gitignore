@@ -1,0 +1,23 @@
+# Ignore AWS credentials
+.aws/
+
+# Ignore CSV data files
+*DeanChap_accessKeys.csv
+
+
+# Ignore Terraform state and secrets
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+crash.log
+
+# Ignore Python artifacts
+__pycache__/
+*.pyc
+
+
+# .gitignore
+lambda.zip
+*.zip
+__pycache__/

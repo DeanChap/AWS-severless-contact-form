@@ -10,7 +10,7 @@
 *.tfstate.*
 .terraform/
 terraform.tfvars
-email.tfvars
+emails.tfvars
 crash.log
 
 # Ignore Python artifacts

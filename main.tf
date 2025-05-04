@@ -1,10 +1,28 @@
-# Declare the AWS caller identity data resource
-data "aws_caller_identity" "current" {}
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+
+  required_version = ">= 1.5.0"
+}
 
 provider "aws" {
   region = "ca-central-1"
 }
 
+# Shows account ID if need
+data "aws_caller_identity" "current" {}
+
+# Importing existing IAM role instead of recreating it
+import {
+  to = aws_iam_role.lambda_exec
+  id = "lambda_exec_role"
+}
+
+# Reference the existing IAM role (already in AWS)
 resource "aws_iam_role" "lambda_exec" {
   name = "lambda_exec_role"
 
@@ -20,12 +38,31 @@ resource "aws_iam_role" "lambda_exec" {
   })
 }
 
-resource "aws_iam_policy_attachment" "lambda_logs" {
-  name       = "attach_lambda_logs"
-  roles      = [aws_iam_role.lambda_exec.name]
+# Attach basic Lambda logging policy
+resource "aws_iam_role_policy_attachment" "lambda_logs" {
+  role       = aws_iam_role.lambda_exec.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# Attach SES permissions for sending email
+resource "aws_iam_role_policy" "lambda_ses" {
+  name = "lambda-ses-policy"
+  role = aws_iam_role.lambda_exec.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Action = [
+        "ses:SendEmail",
+        "ses:SendRawEmail"
+      ],
+      Resource = "*"
+    }]
+  })
+}
+
+# Lambda function deployment
 resource "aws_lambda_function" "contact_form" {
   filename         = "lambda.zip"
   function_name    = "contact_form_lambda"
@@ -42,6 +79,7 @@ resource "aws_lambda_function" "contact_form" {
   }
 }
 
+# API Gateway
 resource "aws_apigatewayv2_api" "contact_form_api" {
   name          = "contact-form-api"
   protocol_type = "HTTP"
@@ -67,6 +105,7 @@ resource "aws_apigatewayv2_route" "contact_route" {
   target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
 }
 
+# Lambda permission for API Gateway
 resource "aws_lambda_permission" "apigw_lambda" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
@@ -74,22 +113,3 @@ resource "aws_lambda_permission" "apigw_lambda" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.contact_form_api.execution_arn}/*/*"
 }
-
-resource "aws_iam_role_policy" "lambda_ses" {
-  name = "lambda-ses-policy"
-  role = aws_iam_role.lambda_exec.id
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [{
-      Effect = "Allow",
-      Action = [
-        "ses:SendEmail",
-        "ses:SendRawEmail"
-      ],
-      Resource = "*"
-    }]
-  })
-}
-
-

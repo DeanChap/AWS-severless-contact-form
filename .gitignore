@@ -2,7 +2,7 @@
 .aws/
 
 # Ignore CSV data files
-*DeanChap_accessKeys.csv
+DeanChap_accessKeys.csv
 
 
 # Ignore Terraform state and secrets

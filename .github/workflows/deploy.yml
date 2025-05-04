@@ -26,8 +26,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ca-central-1
 
+      - name: Zip Lambda Function
+        run: zip -r lambda.zip lambda/
+      
       - name: Terraform Init
         run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -var-file="emails.tfvars"
 
       - name: Terraform Apply
         run: terraform apply -auto-approve -var-file="emails.tfvars"
